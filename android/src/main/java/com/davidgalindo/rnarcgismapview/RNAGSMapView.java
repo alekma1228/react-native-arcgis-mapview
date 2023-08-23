@@ -27,6 +27,8 @@ import com.esri.arcgisruntime.mapping.view.Graphic;
 import com.esri.arcgisruntime.mapping.view.GraphicsOverlay;
 import com.esri.arcgisruntime.mapping.view.IdentifyGraphicsOverlayResult;
 import com.esri.arcgisruntime.mapping.view.MapView;
+import com.esri.arcgisruntime.portal.Portal;
+import com.esri.arcgisruntime.portal.PortalItem;
 import com.esri.arcgisruntime.symbology.SimpleLineSymbol;
 import com.esri.arcgisruntime.tasks.networkanalysis.Route;
 import com.esri.arcgisruntime.tasks.networkanalysis.RouteResult;
@@ -93,7 +95,8 @@ public class RNAGSMapView extends LinearLayout implements LifecycleEventListener
 
     @SuppressLint("ClickableViewAccessibility")
     public void setUpMap() {
-        mapView.setMap(new ArcGISMap(Basemap.Type.STREETS_VECTOR, 34.057, -117.196, 17));
+        ArcGISMap arcGisMap = new ArcGISMap(Basemap.Type.STREETS_VECTOR, 34.057, -117.196, 17);
+        mapView.setMap(arcGisMap);
         mapView.setOnTouchListener(new OnSingleTouchListener(getContext(),mapView));
         routeGraphicsOverlay = new GraphicsOverlay();
         mapView.getGraphicsOverlays().add(routeGraphicsOverlay);
@@ -119,15 +122,18 @@ public class RNAGSMapView extends LinearLayout implements LifecycleEventListener
         if (mapView.getMap() == null) {
             setUpMap();
         }
-        final Basemap basemap = new Basemap(basemapUrl);
-        basemap.addDoneLoadingListener(() -> {
-            if (basemap.getLoadError() != null) {
-                Log.w("AGSMap", "An error occurred: " + basemap.getLoadError().getMessage());
-            } else {
-                mapView.getMap().setBasemap(basemap);
+        try {
+            Portal portal = new Portal("https://www.arcgis.com");
+            String[] array = basemapUrl.split("webmap=");
+            if(array.length > 1) {
+                String mapId = array[1];
+                PortalItem portalItem = new PortalItem(portal, mapId);
+                ArcGISMap arcGisMap = new ArcGISMap(portalItem);
+                mapView.setMap(arcGisMap);
             }
-        });
-        basemap.loadAsync();
+        } catch (Exception e) {
+            String estr = e.toString();
+        }
     }
 
     public void setRouteUrl(String url) {
@@ -140,31 +146,31 @@ public class RNAGSMapView extends LinearLayout implements LifecycleEventListener
     }
 
     public void setInitialMapCenter(ReadableArray initialCenter) {
-        ArrayList<Point> points = new ArrayList<>();
-        for (int i = 0; i < initialCenter.size(); i++) {
-            ReadableMap item = initialCenter.getMap(i);
-            if (item == null) {
-                continue;
-            }
-            Double latitude = item.getDouble("latitude");
-            Double longitude = item.getDouble("longitude");
-            if (latitude == 0 || longitude == 0) {
-                continue;
-            }
-            Point point = new Point(longitude, latitude, SpatialReferences.getWgs84());
-            points.add(point);
-        }
-        // If no points exist, add a sample point
-        if (points.size() == 0) {
-            points.add(new Point(36.244797,-94.148060, SpatialReferences.getWgs84()));
-        }
-        if (points.size() == 1) {
-            mapView.getMap().setInitialViewpoint(new Viewpoint(points.get(0),10000));
-        } else {
-            Polygon polygon = new Polygon(new PointCollection(points));
-            Viewpoint viewpoint = viewpointFromPolygon(polygon);
-            mapView.getMap().setInitialViewpoint(viewpoint);
-        }
+//        ArrayList<Point> points = new ArrayList<>();
+//        for (int i = 0; i < initialCenter.size(); i++) {
+//            ReadableMap item = initialCenter.getMap(i);
+//            if (item == null) {
+//                continue;
+//            }
+//            Double latitude = item.getDouble("latitude");
+//            Double longitude = item.getDouble("longitude");
+//            if (latitude == 0 || longitude == 0) {
+//                continue;
+//            }
+//            Point point = new Point(longitude, latitude, SpatialReferences.getWgs84());
+//            points.add(point);
+//        }
+//        // If no points exist, add a sample point
+//        if (points.size() == 0) {
+//            points.add(new Point(36.244797,-94.148060, SpatialReferences.getWgs84()));
+//        }
+//        if (points.size() == 1) {
+//            mapView.getMap().setInitialViewpoint(new Viewpoint(points.get(0),10000));
+//        } else {
+//            Polygon polygon = new Polygon(new PointCollection(points));
+//            Viewpoint viewpoint = viewpointFromPolygon(polygon);
+//            mapView.getMap().setInitialViewpoint(viewpoint);
+//        }
     }
 
     public void setMinZoom(Double value) {

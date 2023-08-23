@@ -270,16 +270,23 @@ public class RNArcGISMapView: AGSMapView, AGSGeoViewTouchDelegate {
             if (self.map == nil) {
                 setUpMap()
             }
-            if let url = URL(string: basemapUrlString), let basemap = AGSBasemap(url: url){
-                basemap.load { [weak self] (error) in
-                    if let error = error {
-                        print(error.localizedDescription)
-                    } else {
-                        self?.map?.basemap = basemap
+            let portal = AGSPortal(url: URL(string: "https://www.arcgis.com")!, loginRequired: false)
+            let urlArray = basemapUrlString.components(separatedBy: "webmap=")
+            if (urlArray.count > 1) {
+                let mapId = urlArray[1]
+                let portalItem = AGSPortalItem(portal: portal, itemID: mapId)
+                self.map = AGSMap(item: portalItem)
+                self.map?.load(completion: {[weak self] (error) in
+                    if (self?.onMapDidLoad != nil){
+                        var reactResult: [AnyHashable: Any] = ["success" : error != nil]
+                        if (error != nil) {
+                            reactResult["errorMessage"] = error!.localizedDescription
+                        }
+                        self?.onMapDidLoad!(reactResult)
                     }
-                }
-            } else {
-                print("==> Warning: Invalid Basemap URL Provided. A stock basemap will be used. <==")
+                })
+                self.touchDelegate = self
+                self.graphicsOverlays.add(routeGraphicsOverlay)
             }
         }
     }
@@ -296,26 +303,26 @@ public class RNArcGISMapView: AGSMapView, AGSGeoViewTouchDelegate {
     
     @objc var initialMapCenter: NSArray? {
         didSet{
-            var points = [AGSPoint]()
-            if let initialMapCenter = initialMapCenter as? [NSDictionary] {
-                for rawPoint in initialMapCenter {
-                    if let latitude = rawPoint["latitude"] as? NSNumber, let longitude = rawPoint["longitude"] as? NSNumber {
-                        points.append(AGSPoint(x: longitude.doubleValue, y: latitude.doubleValue, spatialReference: AGSSpatialReference.wgs84()))
-                    } // end if let
-                }// end for loop
-            } // end initialmapcenter nil check
-            // If no points exist, add a sample point
-            if points.count == 0 {
-                points.append(AGSPoint(x: 36.244797, y: -94.148060, spatialReference: AGSSpatialReference.wgs84()))
-            }
-            if points.count == 1 {
-                let viewpoint = AGSViewpoint(center: points.first!, scale: 10000)
-                self.map?.initialViewpoint = viewpoint
-            } else {
-                let polygon = AGSPolygon(points: points)
-                self.setViewpointGeometry(polygon, padding: 50, completion: nil)
-            }
-            
+//            var points = [AGSPoint]()
+//            if let initialMapCenter = initialMapCenter as? [NSDictionary] {
+//                for rawPoint in initialMapCenter {
+//                    if let latitude = rawPoint["latitude"] as? NSNumber, let longitude = rawPoint["longitude"] as? NSNumber {
+//                        points.append(AGSPoint(x: longitude.doubleValue, y: latitude.doubleValue, spatialReference: AGSSpatialReference.wgs84()))
+//                    } // end if let
+//                }// end for loop
+//            } // end initialmapcenter nil check
+//            // If no points exist, add a sample point
+//            if points.count == 0 {
+//                points.append(AGSPoint(x: 36.244797, y: -94.148060, spatialReference: AGSSpatialReference.wgs84()))
+//            }
+//            if points.count == 1 {
+//                let viewpoint = AGSViewpoint(center: points.first!, scale: 10000)
+//                self.map?.initialViewpoint = viewpoint
+//            } else {
+//                let polygon = AGSPolygon(points: points)
+//                self.setViewpointGeometry(polygon, padding: 50, completion: nil)
+//            }
+//
         }// end didSet
     }// end initialMapCenter declaration
     
